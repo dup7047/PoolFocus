@@ -1,0 +1,724 @@
+import FamilyControls
+import SwiftUI
+
+@available(iOS 16.0, *)
+struct DashboardView: View {
+    @StateObject private var authorization = ScreenTimeAuthorizationService()
+    @StateObject private var coordinator = ChallengeCoordinator()
+    @State private var isShowingPicker = false
+    @State private var selectedDemoApps: [DemoAppOption] = []
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    StatusHeroCard(
+                        step: focusStep,
+                        statusLabel: statusLabel,
+                        ctaTitle: focusStep.ctaTitle(isDemo: PoolFocusRuntime.isDemoMode),
+                        ctaSystemImage: focusStep.ctaSystemImage,
+                        onPrimary: triggerPrimary
+                    )
+
+                    SelectedAppsCard(
+                        selectedApps: selectedDemoApps,
+                        rawCount: coordinator.selectedAppCount,
+                        versionHash: coordinator.selectionVersionHash,
+                        chooseTitle: chooseAppsTitle,
+                        chooseDisabled: !canChooseApps,
+                        onChoose: { isShowingPicker = true }
+                    )
+
+                    QuickActionsCard(
+                        markReadyEnabled: coordinator.selectedAppCount > 0,
+                        startEnabled: coordinator.selectedAppCount > 0,
+                        isReady: coordinator.activeEntry.status == .ready,
+                        isActive: coordinator.activeEntry.status == .active,
+                        onMarkReady: { Task { await coordinator.markReady() } },
+                        onStart: { Task { await coordinator.startDemoChallenge() } }
+                    )
+
+                    AccessCard(
+                        statusText: authorization.status.displayText,
+                        isApproved: authorization.status.isApproved,
+                        isDemo: PoolFocusRuntime.isDemoMode,
+                        errorMessage: authorization.latestErrorMessage,
+                        onAction: triggerAccess
+                    )
+
+                    if coordinator.pendingEventCount > 0 {
+                        SyncCard(
+                            pendingCount: coordinator.pendingEventCount,
+                            onSync: { Task { await coordinator.syncPendingEvents() } }
+                        )
+                    }
+
+                    if let message = coordinator.latestMessage {
+                        MessageBanner(text: message)
+                    }
+
+                    NonCashFooter()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .padding(.bottom, 28)
+            }
+            .scrollIndicators(.visible)
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(PoolFocusCopy.appName)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        authorization.refresh()
+                        coordinator.refreshLocalState()
+                        reloadSelectedDemoApps()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .accessibilityLabel("Refresh")
+                }
+            }
+            .sheet(isPresented: $isShowingPicker, onDismiss: {
+                coordinator.refreshLocalState()
+                reloadSelectedDemoApps()
+            }) {
+                if PoolFocusRuntime.isDemoMode {
+                    DemoAppSelectionView()
+                } else {
+                    AppSelectionView()
+                }
+            }
+            .task {
+                authorization.refresh()
+                coordinator.refreshLocalState()
+                reloadSelectedDemoApps()
+                await coordinator.syncPendingEvents()
+            }
+        }
+        .tint(.indigo)
+    }
+
+    // MARK: - Derived state
+
+    private var canChooseApps: Bool {
+        PoolFocusRuntime.isDemoMode || authorization.status.isApproved
+    }
+
+    private var chooseAppsTitle: String {
+        PoolFocusRuntime.isDemoMode ? "Choose Demo Apps" : "Choose Apps"
+    }
+
+    private var statusLabel: String {
+        coordinator.activeEntry.status.displayLabel
+    }
+
+    private var focusStep: FocusStep {
+        if !authorization.status.isApproved {
+            return .needsAccess
+        }
+        if coordinator.selectedAppCount == 0 {
+            return .needsApps
+        }
+        if coordinator.activeEntry.status == .active {
+            return .focusActive
+        }
+        if coordinator.activeEntry.status == .ready {
+            return .readyToStart
+        }
+        return .canMarkReady
+    }
+
+    private func reloadSelectedDemoApps() {
+        guard PoolFocusRuntime.isDemoMode else {
+            selectedDemoApps = []
+            return
+        }
+        let ids = DemoAppSelectionStore()?.selectedIDs() ?? []
+        selectedDemoApps = DemoAppSelectionStore.options.filter { ids.contains($0.id) }
+    }
+
+    // MARK: - Actions
+
+    private func triggerPrimary() {
+        switch focusStep {
+        case .needsAccess:
+            triggerAccess()
+        case .needsApps:
+            isShowingPicker = true
+        case .canMarkReady:
+            Task { await coordinator.markReady() }
+        case .readyToStart, .focusActive:
+            Task { await coordinator.startDemoChallenge() }
+        }
+    }
+
+    private func triggerAccess() {
+        if PoolFocusRuntime.isDemoMode {
+            authorization.enableDemoAccess()
+        } else {
+            Task { await authorization.requestAuthorization() }
+        }
+    }
+}
+
+// MARK: - Focus step state machine
+
+@available(iOS 16.0, *)
+private enum FocusStep: Equatable {
+    case needsAccess
+    case needsApps
+    case canMarkReady
+    case readyToStart
+    case focusActive
+
+    var headline: String {
+        switch self {
+        case .needsAccess: return "Grant Screen Time access"
+        case .needsApps: return "Pick what to avoid"
+        case .canMarkReady: return "Lock in for today"
+        case .readyToStart: return "You're ready"
+        case .focusActive: return "Focus is on"
+        }
+    }
+
+    var subheadline: String {
+        switch self {
+        case .needsAccess:
+            return "PoolFocus needs Screen Time access before it can monitor your apps."
+        case .needsApps:
+            return "Choose the apps that will count toward your daily focus block."
+        case .canMarkReady:
+            return "Mark yourself ready to commit to today's focus block."
+        case .readyToStart:
+            return "Tap Start to run a 1-minute demo of how a real challenge works."
+        case .focusActive:
+            return "Stay off the apps you picked. Your demo run is in progress."
+        }
+    }
+
+    var iconSystemName: String {
+        switch self {
+        case .needsAccess: return "lock.shield"
+        case .needsApps: return "square.grid.2x2"
+        case .canMarkReady: return "checkmark.circle"
+        case .readyToStart: return "play.circle"
+        case .focusActive: return "moon.stars"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .needsAccess: return .blue
+        case .needsApps: return .indigo
+        case .canMarkReady: return .teal
+        case .readyToStart: return .green
+        case .focusActive: return .orange
+        }
+    }
+
+    var ctaSystemImage: String {
+        switch self {
+        case .needsAccess: return "lock.open"
+        case .needsApps: return "square.grid.2x2"
+        case .canMarkReady: return "checkmark.circle.fill"
+        case .readyToStart: return "play.fill"
+        case .focusActive: return "arrow.clockwise"
+        }
+    }
+
+    func ctaTitle(isDemo: Bool) -> String {
+        switch self {
+        case .needsAccess:
+            return isDemo ? "Use Demo Screen Time Access" : "Request Screen Time Access"
+        case .needsApps:
+            return isDemo ? "Choose Demo Apps" : "Choose Apps"
+        case .canMarkReady:
+            return "Mark Ready"
+        case .readyToStart:
+            return "Start 1-Minute Demo"
+        case .focusActive:
+            return "Restart 1-Minute Demo"
+        }
+    }
+}
+
+// MARK: - Hero card
+
+@available(iOS 16.0, *)
+private struct StatusHeroCard: View {
+    let step: FocusStep
+    let statusLabel: String
+    let ctaTitle: String
+    let ctaSystemImage: String
+    let onPrimary: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(step.tint.opacity(0.18))
+                    Image(systemName: step.iconSystemName)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(step.tint)
+                }
+                .frame(width: 52, height: 52)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Today's focus")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .kerning(0.6)
+
+                    Text(step.headline)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                }
+
+                Spacer(minLength: 0)
+
+                StatusPill(text: statusLabel, tint: step.tint)
+            }
+
+            Text(step.subheadline)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: onPrimary) {
+                HStack {
+                    Image(systemName: ctaSystemImage)
+                    Text(ctaTitle)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(step.tint)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+}
+
+@available(iOS 16.0, *)
+private struct StatusPill: View {
+    let text: String
+    let tint: Color
+
+    var body: some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(tint.opacity(0.15), in: Capsule())
+            .lineLimit(1)
+    }
+}
+
+// MARK: - Section card chrome
+
+@available(iOS 16.0, *)
+private struct CardSection<Content: View>: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(tint)
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .kerning(0.6)
+            }
+
+            content
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+// MARK: - Selected apps card
+
+@available(iOS 16.0, *)
+private struct SelectedAppsCard: View {
+    let selectedApps: [DemoAppOption]
+    let rawCount: Int
+    let versionHash: String?
+    let chooseTitle: String
+    let chooseDisabled: Bool
+    let onChoose: () -> Void
+
+    var body: some View {
+        CardSection(title: "Apps to avoid", systemImage: "hand.raised", tint: .indigo) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("\(rawCount)")
+                    .font(.system(size: 34, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.primary)
+
+                Text(rawCount == 1 ? "app selected" : "apps selected")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+            }
+
+            if !selectedApps.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(selectedApps) { app in
+                            AppTile(app: app, size: 48)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            } else if rawCount == 0 {
+                EmptyAppsHint()
+            }
+
+            if let versionHash, !versionHash.isEmpty {
+                Text("Selection \(versionHash.prefix(10))")
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.tertiary)
+            }
+
+            Button(action: onChoose) {
+                HStack {
+                    Image(systemName: "square.grid.2x2")
+                    Text(chooseTitle)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            .tint(.indigo)
+            .disabled(chooseDisabled)
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+private struct AppTile: View {
+    let app: DemoAppOption
+    let size: CGFloat
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(DemoAppPalette.tint(for: app.id).gradient)
+                Image(systemName: app.systemImage)
+                    .font(.system(size: size * 0.42, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            .frame(width: size, height: size)
+            .shadow(color: DemoAppPalette.tint(for: app.id).opacity(0.25), radius: 4, x: 0, y: 2)
+
+            Text(app.name)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(width: size + 12)
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+private struct EmptyAppsHint: View {
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "tray")
+                .foregroundStyle(.secondary)
+            Text("Pick a few demo apps to start a focus block.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+        }
+        .padding(12)
+        .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+// MARK: - Quick actions card
+
+@available(iOS 16.0, *)
+private struct QuickActionsCard: View {
+    let markReadyEnabled: Bool
+    let startEnabled: Bool
+    let isReady: Bool
+    let isActive: Bool
+    let onMarkReady: () -> Void
+    let onStart: () -> Void
+
+    var body: some View {
+        CardSection(title: "Today's pool", systemImage: "person.2", tint: .teal) {
+            HStack(spacing: 10) {
+                ActionButton(
+                    title: isReady ? "Marked Ready" : "Mark Ready",
+                    systemImage: isReady ? "checkmark.circle.fill" : "checkmark.circle",
+                    tint: .teal,
+                    enabled: markReadyEnabled
+                ) {
+                    onMarkReady()
+                }
+
+                ActionButton(
+                    title: isActive ? "Restart" : "Start Demo",
+                    systemImage: isActive ? "arrow.clockwise" : "play.fill",
+                    tint: .green,
+                    enabled: startEnabled
+                ) {
+                    onStart()
+                }
+            }
+
+            if !markReadyEnabled {
+                Text("Pick at least one app to enable these actions.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+private struct ActionButton: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    let enabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.title3)
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+        }
+        .buttonStyle(.bordered)
+        .tint(tint)
+        .disabled(!enabled)
+    }
+}
+
+// MARK: - Access card
+
+@available(iOS 16.0, *)
+private struct AccessCard: View {
+    let statusText: String
+    let isApproved: Bool
+    let isDemo: Bool
+    let errorMessage: String?
+    let onAction: () -> Void
+
+    var body: some View {
+        CardSection(title: "Screen Time access", systemImage: "lock.shield", tint: .blue) {
+            HStack(spacing: 12) {
+                Image(systemName: isApproved ? "checkmark.shield.fill" : "shield.lefthalf.filled")
+                    .font(.title3)
+                    .foregroundStyle(isApproved ? .green : .orange)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(statusText)
+                        .font(.body.weight(.medium))
+                    Text(isDemo
+                         ? "Demo mode simulates Apple's authorization."
+                         : isApproved ? "PoolFocus can monitor selected apps." : "Required to start any focus block.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer()
+            }
+
+            if !isApproved || isDemo {
+                Button(action: onAction) {
+                    Label(
+                        isDemo ? "Use Demo Screen Time Access" : "Request Screen Time Access",
+                        systemImage: isDemo ? "sparkles" : "lock.open"
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .tint(.blue)
+                .disabled(isDemo && isApproved)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+}
+
+// MARK: - Sync card
+
+@available(iOS 16.0, *)
+private struct SyncCard: View {
+    let pendingCount: Int
+    let onSync: () -> Void
+
+    var body: some View {
+        CardSection(title: "Event sync", systemImage: "arrow.triangle.2.circlepath", tint: .purple) {
+            HStack(spacing: 12) {
+                Image(systemName: "tray.full")
+                    .font(.title3)
+                    .foregroundStyle(.purple)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(pendingCount) pending")
+                        .font(.body.weight(.medium))
+                    Text("Local events waiting to sync to the backend.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+
+            Button(action: onSync) {
+                Label("Sync Now", systemImage: "icloud.and.arrow.up")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+            .tint(.purple)
+        }
+    }
+}
+
+// MARK: - Footer notice + transient banner
+
+@available(iOS 16.0, *)
+private struct NonCashFooter: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "leaf")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.green)
+            Text(PoolFocusCopy.noMoneyMVPNotice)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+        }
+        .padding(.horizontal, 4)
+        .padding(.top, 4)
+    }
+}
+
+@available(iOS 16.0, *)
+private struct MessageBanner: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle")
+                .foregroundStyle(.blue)
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Demo brand palette
+
+enum DemoAppPalette {
+    static func tint(for id: String) -> Color {
+        switch id {
+        case "instagram": return .pink
+        case "tiktok": return .cyan
+        case "youtube": return .red
+        case "reddit": return .orange
+        case "safari": return .blue
+        case "games": return .green
+        default: return .indigo
+        }
+    }
+}
+
+// MARK: - Status / authorization display helpers
+
+private extension ChallengeEntryStatus {
+    var displayLabel: String {
+        switch self {
+        case .pendingConfig: return "Setup"
+        case .ready: return "Ready"
+        case .active: return "Active"
+        case .forfeited: return "Forfeited"
+        case .completed: return "Done"
+        case .invalid: return "Invalid"
+        }
+    }
+}
+
+@available(iOS 16.0, *)
+private extension AuthorizationStatus {
+    var isApproved: Bool {
+        if PoolFocusRuntime.isDemoMode {
+            return true
+        }
+
+        switch self {
+        case .approved, .approvedWithDataAccess:
+            return true
+        case .notDetermined, .denied:
+            return false
+        @unknown default:
+            return false
+        }
+    }
+
+    var displayText: String {
+        if PoolFocusRuntime.isDemoMode {
+            return PoolFocusRuntime.demoModeLabel
+        }
+
+        switch self {
+        case .notDetermined:
+            return "Not requested"
+        case .denied:
+            return "Denied"
+        case .approved:
+            return "Approved"
+        case .approvedWithDataAccess:
+            return "Approved"
+        @unknown default:
+            return "Unknown"
+        }
+    }
+}

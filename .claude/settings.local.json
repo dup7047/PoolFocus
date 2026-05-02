@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcodegen generate *)",
+      "Bash(env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project PoolFocus.xcodeproj -scheme PoolFocusDemo -configuration Debug -destination 'platform=iOS,id=00008130-001068A60091401C' -derivedDataPath /Users/dantino/Desktop/PoolFocus/DerivedData SYMROOT=/Users/dantino/Desktop/PoolFocus/BuildProducts OBJROOT=/Users/dantino/Desktop/PoolFocus/BuildIntermediates CLANG_MODULE_CACHE_PATH=/Users/dantino/Desktop/PoolFocus/.build/clang-module-cache -allowProvisioningUpdates -allowProvisioningDeviceRegistration build)",
+      "Bash(xcrun devicectl *)",
+      "Bash(env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun devicectl device install app --device 00008130-001068A60091401C /Users/dantino/Desktop/PoolFocus/BuildProducts/Debug-iphoneos/PoolFocusDemo.app)",
+      "Bash(env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun devicectl device process launch --device 00008130-001068A60091401C com.dantino.PoolFocusDemo)",
+      "Bash(gh auth *)",
+      "Bash(git --version)",
+      "Bash(git ls-remote *)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git add *)"
+    ]
+  }
+}

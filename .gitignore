@@ -1,0 +1,11 @@
+.build/
+backend/dist/
+DerivedData/
+DerivedDataRealCheck/
+BuildProducts/
+BuildProductsRealCheck/
+BuildIntermediates/
+BuildIntermediatesRealCheck/
+*.xcuserdata/
+*.xcuserstate
+.DS_Store

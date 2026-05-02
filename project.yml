@@ -1,0 +1,196 @@
+name: PoolFocus
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    DEVELOPMENT_TEAM: RVL4P98U3N
+    SWIFT_VERSION: "6.0"
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    PRODUCT_NAME: "$(TARGET_NAME)"
+targets:
+  PoolFocusSimulator:
+    type: application
+    platform: iOS
+    supportedDestinations: [iOS, iPhone, iPad]
+    sources:
+      - path: Sources/PoolFocusCore
+      - path: PoolFocusApp
+    info:
+      path: Config/PoolFocusApp-Info.plist
+      properties:
+        UILaunchStoryboardName: LaunchScreen
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    entitlements:
+      path: Config/PoolFocusSimulator.entitlements
+    settings:
+      base:
+        PRODUCT_NAME: PoolFocusDemo
+        PRODUCT_BUNDLE_IDENTIFIER: com.dantino.PoolFocusDemo
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Config/PoolFocusSimulator.entitlements
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) POOLFOCUS_DEMO"
+
+  PoolFocus:
+    type: application
+    platform: iOS
+    supportedDestinations: [iOS, iPhone, iPad]
+    sources:
+      - path: Sources/PoolFocusCore
+      - path: PoolFocusApp
+    info:
+      path: Config/PoolFocusApp-Info.plist
+      properties:
+        UILaunchStoryboardName: LaunchScreen
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+    entitlements:
+      path: Config/PoolFocusApp.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.dantino.PoolFocus
+    dependencies:
+      - target: PoolFocusDeviceActivityMonitor
+        embed: true
+      - target: PoolFocusShieldAction
+        embed: true
+      - target: PoolFocusShieldConfiguration
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dantino.PoolFocus
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Config/PoolFocusApp.entitlements
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+
+  PoolFocusDeviceActivityMonitor:
+    type: app-extension
+    platform: iOS
+    supportedDestinations: [iOS, iPhone, iPad]
+    sources:
+      - path: Sources/PoolFocusCore
+      - path: PoolFocusApp/Shared
+      - path: PoolFocusApp/Services/ScreenTimeSelectionStore.swift
+      - path: PoolFocusExtensions/DeviceActivityMonitor
+    info:
+      path: Config/DeviceActivityMonitor-Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).PoolFocusDeviceActivityMonitor"
+          NSExtensionPointIdentifier: com.apple.deviceactivity.monitor-extension
+    entitlements:
+      path: Config/PoolFocusExtensions.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.dantino.PoolFocus
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dantino.PoolFocus.DeviceActivityMonitor
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Config/PoolFocusExtensions.entitlements
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+
+  PoolFocusShieldAction:
+    type: app-extension
+    platform: iOS
+    supportedDestinations: [iOS, iPhone, iPad]
+    sources:
+      - path: Sources/PoolFocusCore
+      - path: PoolFocusApp/Shared
+      - path: PoolFocusExtensions/ShieldAction
+    info:
+      path: Config/ShieldAction-Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).PoolFocusShieldActionExtension"
+          NSExtensionPointIdentifier: com.apple.ManagedSettings.shield-action-service
+    entitlements:
+      path: Config/PoolFocusExtensions.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.dantino.PoolFocus
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dantino.PoolFocus.ShieldAction
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Config/PoolFocusExtensions.entitlements
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+
+  PoolFocusShieldConfiguration:
+    type: app-extension
+    platform: iOS
+    supportedDestinations: [iOS, iPhone, iPad]
+    sources:
+      - path: PoolFocusExtensions/ShieldConfiguration
+    info:
+      path: Config/ShieldConfiguration-Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).PoolFocusShieldConfigurationExtension"
+          NSExtensionPointIdentifier: com.apple.ManagedSettingsUI.shield-configuration-service
+    entitlements:
+      path: Config/PoolFocusExtensions.entitlements
+      properties:
+        com.apple.developer.family-controls: true
+        com.apple.security.application-groups:
+          - group.com.dantino.PoolFocus
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.dantino.PoolFocus.ShieldConfiguration
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Config/PoolFocusExtensions.entitlements
+        SUPPORTED_PLATFORMS: "iphoneos iphonesimulator"
+
+schemes:
+  PoolFocus:
+    build:
+      targets:
+        PoolFocus: all
+    run:
+      config: Debug
+      executable: PoolFocus
+    profile:
+      config: Release
+      executable: PoolFocus
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  PoolFocusSimulator:
+    build:
+      targets:
+        PoolFocusSimulator: all
+    run:
+      config: Debug
+      executable: PoolFocusSimulator
+    profile:
+      config: Release
+      executable: PoolFocusSimulator
+    analyze:
+      config: Debug
+    archive:
+      config: Release
+
+  PoolFocusDemo:
+    build:
+      targets:
+        PoolFocusSimulator: all
+    run:
+      config: Debug
+      executable: PoolFocusSimulator
+    profile:
+      config: Release
+      executable: PoolFocusSimulator
+    analyze:
+      config: Debug
+    archive:
+      config: Release
