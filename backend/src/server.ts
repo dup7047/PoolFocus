@@ -1,14 +1,35 @@
 import "dotenv/config";
+import { eq } from "drizzle-orm";
+import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
 import Fastify from "fastify";
 import { randomUUID } from "node:crypto";
+import pg from "pg";
+import {
+  challengeDays as challengeDaysTable,
+  devices as devicesTable,
+  pools as poolsTable,
+  users as usersTable
+} from "./db/schema.js";
 import { ChallengeEventRequest, ChallengeReadinessRequest } from "./models.js";
-import { InMemoryRepository } from "./repository.js";
+import { PgRepository } from "./pg-repository.js";
+import { InMemoryRepository, Repository } from "./repository.js";
 import { awardPoints, finalizeEntries, leaderboard } from "./scoring.js";
 
-const repository = new InMemoryRepository();
-seedDevelopmentData(repository);
-
 const isProduction = process.env.NODE_ENV === "production";
+
+const databaseUrl = process.env.DATABASE_URL;
+let pool: pg.Pool | undefined;
+let db: NodePgDatabase | undefined;
+let repository: Repository;
+if (databaseUrl) {
+  pool = new pg.Pool({ connectionString: databaseUrl });
+  db = drizzle(pool);
+  repository = new PgRepository(db);
+} else {
+  const memory = new InMemoryRepository();
+  seedInMemoryFixtures(memory);
+  repository = memory;
+}
 
 const app = Fastify({
   genReqId: () => randomUUID(),
@@ -26,26 +47,81 @@ const app = Fastify({
   }
 });
 
-app.get("/health", async () => ({ ok: true, mode: "non-cash-mvp" }));
+app.get("/health", async () => ({
+  ok: true,
+  mode: "non-cash-mvp",
+  storage: db ? "postgres" : "memory"
+}));
 
-app.post<{ Body: ChallengeReadinessRequest }>(
+// Dev convenience: ensures today's challenge_day exists for the seeded pool and
+// returns the IDs needed to round-trip through readiness/leaderboard.
+// Postgres-only.
+app.post("/dev/bootstrap", async (_request, reply) => {
+  if (!db) {
+    reply.code(503);
+    return { error: "Postgres not configured" };
+  }
+
+  const ctx = await loadDevContext(db);
+  if (!ctx) {
+    reply.code(409);
+    return {
+      error: "Seed missing. Run `npm run seed` first."
+    };
+  }
+
+  const start = startOfTodayUTC();
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+
+  const existing = await db
+    .select()
+    .from(challengeDaysTable)
+    .where(eq(challengeDaysTable.poolId, ctx.poolID))
+    .limit(1);
+
+  let challengeDayID: string;
+  if (existing[0] && existing[0].challengeStartUtc.getTime() === start.getTime()) {
+    challengeDayID = existing[0].id;
+  } else {
+    const [created] = await db
+      .insert(challengeDaysTable)
+      .values({
+        poolId: ctx.poolID,
+        challengeStartUtc: start,
+        challengeEndUtc: end,
+        status: "active"
+      })
+      .returning();
+    challengeDayID = created.id;
+  }
+
+  return {
+    userID: ctx.userID,
+    poolID: ctx.poolID,
+    deviceID: ctx.deviceID,
+    challengeDayID
+  };
+});
+
+app.post<{ Body: ChallengeReadinessRequest & { userID?: string; displayName?: string } }>(
   "/challenge/readiness",
-  async (request) => {
+  async (request, reply) => {
     const body = request.body;
-    const existingEntry = [...repository.entries.values()].find(
-      (entry) =>
-        entry.challengeDayID === body.challengeDayID &&
-        entry.userID === "development-user"
-    );
+    const userID = body.userID;
+    if (!userID) {
+      reply.code(400);
+      return { error: "userID required" };
+    }
 
-    const entry = repository.upsertEntry({
-      id: existingEntry?.id ?? randomUUID(),
+    const existing = await repository.getEntryByDayAndUser(body.challengeDayID, userID);
+    const entry = await repository.upsertEntry({
+      id: existing?.id ?? randomUUID(),
       challengeDayID: body.challengeDayID,
-      userID: "development-user",
-      displayName: "You",
+      userID,
+      displayName: body.displayName ?? existing?.displayName ?? "Player",
       status: "ready",
       selectionVersionHash: body.selectionVersionHash,
-      pointsAwarded: 0
+      pointsAwarded: existing?.pointsAwarded ?? 0
     });
 
     return { entry };
@@ -55,8 +131,7 @@ app.post<{ Body: ChallengeReadinessRequest }>(
 app.post<{ Body: ChallengeEventRequest }>(
   "/challenge/events",
   async (request, reply) => {
-    const body = request.body;
-    const event = repository.appendEvent(body.event);
+    const event = await repository.appendEvent(request.body.event);
     reply.code(202);
     return { event };
   }
@@ -66,14 +141,14 @@ app.get<{ Params: { challengeDayID: string } }>(
   "/challenge/leaderboard/:challengeDayID",
   async (request, reply) => {
     const { challengeDayID } = request.params;
-    const challengeDay = repository.challengeDays.get(challengeDayID);
+    const challengeDay = await repository.getChallengeDay(challengeDayID);
     if (!challengeDay) {
       reply.code(404);
       return { error: "Challenge day not found" };
     }
 
-    const entries = repository.entriesForChallenge(challengeDayID);
-    const events = repository.eventsForEntries(
+    const entries = await repository.entriesForChallenge(challengeDayID);
+    const events = await repository.eventsForEntries(
       new Set(entries.map((entry) => entry.id))
     );
     const finalized = finalizeEntries({
@@ -88,7 +163,9 @@ app.get<{ Params: { challengeDayID: string } }>(
       challengeStartUTC: challengeDay.challengeStartUTC,
       challengeEndUTC: challengeDay.challengeEndUTC
     });
-    awarded.forEach((entry) => repository.upsertEntry(entry));
+    for (const entry of awarded) {
+      await repository.upsertEntry(entry);
+    }
 
     return {
       challengeDayID,
@@ -109,14 +186,70 @@ const host = process.env.HOST ?? "0.0.0.0";
 app
   .listen({ port, host })
   .then(() => {
-    app.log.info(`PoolFocus MVP backend listening on http://${host}:${port}`);
+    app.log.info(
+      { storage: db ? "postgres" : "memory" },
+      `PoolFocus MVP backend listening on http://${host}:${port}`
+    );
   })
   .catch((error) => {
     app.log.error(error, "Failed to start server");
     process.exit(1);
   });
 
-function seedDevelopmentData(store: InMemoryRepository): void {
+const shutdown = async () => {
+  await app.close();
+  await pool?.end();
+  process.exit(0);
+};
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
+interface DevContext {
+  userID: string;
+  poolID: string;
+  deviceID: string;
+}
+
+async function loadDevContext(database: NodePgDatabase): Promise<DevContext | undefined> {
+  const [user] = await database
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.appleUserId, "dev.local.001"))
+    .limit(1);
+  if (!user) return undefined;
+
+  const [pool] = await database
+    .select({ id: poolsTable.id })
+    .from(poolsTable)
+    .where(eq(poolsTable.ownerUserId, user.id))
+    .limit(1);
+  if (!pool) return undefined;
+
+  const existingDevice = await database
+    .select({ id: devicesTable.id })
+    .from(devicesTable)
+    .where(eq(devicesTable.userId, user.id))
+    .limit(1);
+  let deviceID: string;
+  if (existingDevice[0]) {
+    deviceID = existingDevice[0].id;
+  } else {
+    const [created] = await database
+      .insert(devicesTable)
+      .values({ userId: user.id, deviceIdentifier: "dev-local-device" })
+      .returning({ id: devicesTable.id });
+    deviceID = created.id;
+  }
+
+  return { userID: user.id, poolID: pool.id, deviceID };
+}
+
+function startOfTodayUTC(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
+function seedInMemoryFixtures(store: InMemoryRepository): void {
   const poolID = "development-pool";
   const challengeDayID = "development-challenge-day";
   const now = new Date();
