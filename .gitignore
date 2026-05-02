@@ -1,5 +1,10 @@
 .build/
 backend/dist/
+backend/node_modules/
+backend/.npm-cache/
+backend/.env
+backend/.env.*
+!backend/.env.example
 DerivedData/
 DerivedDataRealCheck/
 BuildProducts/
