@@ -4,6 +4,7 @@ import SwiftUI
 struct TodayView: View {
     @EnvironmentObject private var authorization: ScreenTimeAuthorizationService
     @EnvironmentObject private var coordinator: ChallengeCoordinator
+    @EnvironmentObject private var auth: AuthService
     @State private var isShowingPoolSetup = false
     @State private var isShowingAppPicker = false
 
@@ -12,6 +13,8 @@ struct TodayView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     switch stage {
+                    case .signIn:
+                        SignInGate()
                     case .welcome:
                         WelcomeCard(onCreate: { isShowingPoolSetup = true }, onJoin: { isShowingPoolSetup = true })
                     case .needsApps:
@@ -71,6 +74,9 @@ struct TodayView: View {
     }
 
     private var stage: TodayStage {
+        if auth.currentUser == nil {
+            return .signIn
+        }
         if coordinator.pool == nil {
             return .welcome
         }
@@ -95,6 +101,7 @@ struct TodayView: View {
 
 @available(iOS 16.0, *)
 private enum TodayStage {
+    case signIn
     case welcome
     case needsApps
     case readyToCommit

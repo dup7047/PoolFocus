@@ -31,6 +31,7 @@
 		41C1F295F916A72D8FAC9269 /* DemoPool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 952B3CC43636B7A75BE54631 /* DemoPool.swift */; };
 		43CFE4A4C22E32ACD8B5D4D0 /* DeviceIdentityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE2E647EF45E083CD406EB43 /* DeviceIdentityStore.swift */; };
 		44F4E8B7EF8EBC899783AA62 /* PoolFocusShieldConfigurationExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D17B8BD9CE47B79CD5C6A1F /* PoolFocusShieldConfigurationExtension.swift */; };
+		4AD9DF77423C3E331F8CAFCC /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503F3F0CEE01AF29502EB4F /* AuthSession.swift */; };
 		4B0F4C801B6BBCB9494F6B45 /* HTTPChallengeAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E120F17AE11FD7C1542C2974 /* HTTPChallengeAPIClient.swift */; };
 		4BCAD44BA6175AEAD8BF45F7 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60753B3E91F7A2DCFD6ED71 /* SharedComponents.swift */; };
 		4D6A37705300F6A3D817FEA4 /* AppGroupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D96644CF18D7EE8A7DD0BF8 /* AppGroupStore.swift */; };
@@ -44,18 +45,26 @@
 		708C919B9086FDC38CE36413 /* APIDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081DC4F0927F4B5C7318A324 /* APIDTOs.swift */; };
 		71C516CFF70F97F0F39A3E0C /* ChallengeScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E97D43360D98F5DA53C44E /* ChallengeScoring.swift */; };
 		7431571A5E61D8FCCA710E89 /* ChallengeScoring.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6E97D43360D98F5DA53C44E /* ChallengeScoring.swift */; };
+		766F5023D642A0CC6A21CEAF /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDDB334BED9B2BDDCD58B032 /* AuthService.swift */; };
 		7A9C997B9F0C9B4131382961 /* DemoPoolStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61367BED15863096CFB7E09B /* DemoPoolStore.swift */; };
 		7BE5604D12B3FF679EB26559 /* AppGroupStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D96644CF18D7EE8A7DD0BF8 /* AppGroupStore.swift */; };
+		7C426B978C4B4FEFBE6226DF /* SignInGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2022CD14EBBA00C68949D3E0 /* SignInGate.swift */; };
 		7E58504BDD5C51652C3D640C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 25F17E53882494EDDE1B5558 /* LaunchScreen.storyboard */; };
 		81EC980E5410804BC4A867CC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FBF554A09B72D89EF48F1091 /* Assets.xcassets */; };
+		822C1F646C5E364C613897F4 /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503F3F0CEE01AF29502EB4F /* AuthSession.swift */; };
+		84458B93B1BA04D4CEB3ECA2 /* KeychainAuthTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD2997103C4B230AF3ED2DE /* KeychainAuthTokenStore.swift */; };
+		8632FF11FBA391A27B0A19EA /* KeychainAuthTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BD2997103C4B230AF3ED2DE /* KeychainAuthTokenStore.swift */; };
 		877353E984AD93C1A0B8B16C /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60753B3E91F7A2DCFD6ED71 /* SharedComponents.swift */; };
 		89E8F445B13843FDA869961D /* AppAttestService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10568C2A5E46080F79E8C5CD /* AppAttestService.swift */; };
+		8B4E7AEF452F1A52CD2E2958 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDDB334BED9B2BDDCD58B032 /* AuthService.swift */; };
 		8DB4DC8A639876995A7ACCAE /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 254A541B8E18699F56B269E8 /* ProfileView.swift */; };
 		8DFE0AB3B727CFB671FBBA2A /* DemoAppSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7557E573F2321CFA917E1EA7 /* DemoAppSelectionView.swift */; };
 		8E23DCB4C36C547FAF8806B0 /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = C60753B3E91F7A2DCFD6ED71 /* SharedComponents.swift */; };
 		971DF952033E0F86EF2D7897 /* ScreenTimeAuthorizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ED4A21F1436E47AD95AD351 /* ScreenTimeAuthorizationService.swift */; };
+		A351340737574FA2D7BDE9AC /* SignInGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2022CD14EBBA00C68949D3E0 /* SignInGate.swift */; };
 		A3B96399C9FFEED0D95A2AE3 /* PoolFocusRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9291BF85CB690F1B38E9C54F /* PoolFocusRuntime.swift */; };
 		A93500F42B8BFF9228AD763B /* PoolFocusConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA404756B419D08AFFC6C51E /* PoolFocusConstants.swift */; };
+		AA9D8668F22FDD53FA98328E /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503F3F0CEE01AF29502EB4F /* AuthSession.swift */; };
 		AEEA9608525EA3807A085C37 /* ChallengeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81FE85C9005C7698603A405C /* ChallengeModels.swift */; };
 		B2BE684EB9B731F31742A29E /* ChallengeAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 305E8FD27982CC2DF39C0D75 /* ChallengeAPIClient.swift */; };
 		B5B6D5FFFA81AEFA0EB73162 /* PoolFocusConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA404756B419D08AFFC6C51E /* PoolFocusConstants.swift */; };
@@ -75,6 +84,7 @@
 		D8D624183CAB447BB77856F6 /* LocalChallengeEventStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFC99BB179FBD16E47DA3CB7 /* LocalChallengeEventStore.swift */; };
 		D9166AC895DB61DB255E7BC6 /* DemoAppSelectionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55C043D5D066D5A0E26477A5 /* DemoAppSelectionStore.swift */; };
 		DB177BEF4E7F2591BBD09CFF /* PoolFocusApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F016B4B720A722828860AED2 /* PoolFocusApp.swift */; };
+		E168A38ABE62293BF5030585 /* AuthSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D503F3F0CEE01AF29502EB4F /* AuthSession.swift */; };
 		EA36BE8F831D37A07AF321E3 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FBF554A09B72D89EF48F1091 /* Assets.xcassets */; };
 		EA8EB423025AAD2F29B207F9 /* DeviceIdentityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE2E647EF45E083CD406EB43 /* DeviceIdentityStore.swift */; };
 		EDA8867FBAA9319DC61E1793 /* APIDTOs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081DC4F0927F4B5C7318A324 /* APIDTOs.swift */; };
@@ -134,6 +144,7 @@
 		10568C2A5E46080F79E8C5CD /* AppAttestService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppAttestService.swift; sourceTree = "<group>"; };
 		1536590097D2E1E1EBA26EB2 /* PoolFocusDeviceActivityMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolFocusDeviceActivityMonitor.swift; sourceTree = "<group>"; };
 		1ED4A21F1436E47AD95AD351 /* ScreenTimeAuthorizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenTimeAuthorizationService.swift; sourceTree = "<group>"; };
+		2022CD14EBBA00C68949D3E0 /* SignInGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInGate.swift; sourceTree = "<group>"; };
 		206772403EF368DF45681931 /* AppSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSelectionView.swift; sourceTree = "<group>"; };
 		254A541B8E18699F56B269E8 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		2C1EBF4E85EAC3F3CB7658A6 /* PoolFocusShieldConfiguration.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PoolFocusShieldConfiguration.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -142,6 +153,7 @@
 		50241659AE624D4C68942449 /* PoolFocusShieldAction.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = PoolFocusShieldAction.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		55C043D5D066D5A0E26477A5 /* DemoAppSelectionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoAppSelectionStore.swift; sourceTree = "<group>"; };
 		61367BED15863096CFB7E09B /* DemoPoolStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoPoolStore.swift; sourceTree = "<group>"; };
+		6BD2997103C4B230AF3ED2DE /* KeychainAuthTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainAuthTokenStore.swift; sourceTree = "<group>"; };
 		7557E573F2321CFA917E1EA7 /* DemoAppSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoAppSelectionView.swift; sourceTree = "<group>"; };
 		81FE85C9005C7698603A405C /* ChallengeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeModels.swift; sourceTree = "<group>"; };
 		8D17B8BD9CE47B79CD5C6A1F /* PoolFocusShieldConfigurationExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolFocusShieldConfigurationExtension.swift; sourceTree = "<group>"; };
@@ -159,8 +171,10 @@
 		C423CC96AC2035B8B8210578 /* PoolFocusSimulator.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PoolFocusSimulator.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C60753B3E91F7A2DCFD6ED71 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		C78676F366008E39433450CD /* PoolFocus.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PoolFocus.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D503F3F0CEE01AF29502EB4F /* AuthSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSession.swift; sourceTree = "<group>"; };
 		E120F17AE11FD7C1542C2974 /* HTTPChallengeAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPChallengeAPIClient.swift; sourceTree = "<group>"; };
 		E35FA5BB98C215219AE416FF /* PoolFocusShieldActionExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolFocusShieldActionExtension.swift; sourceTree = "<group>"; };
+		EDDB334BED9B2BDDCD58B032 /* AuthService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthService.swift; sourceTree = "<group>"; };
 		F016B4B720A722828860AED2 /* PoolFocusApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoolFocusApp.swift; sourceTree = "<group>"; };
 		FBF554A09B72D89EF48F1091 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FC0F6E0F9ECDF7400CAE0852 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -205,6 +219,7 @@
 			isa = PBXGroup;
 			children = (
 				081DC4F0927F4B5C7318A324 /* APIDTOs.swift */,
+				D503F3F0CEE01AF29502EB4F /* AuthSession.swift */,
 				81FE85C9005C7698603A405C /* ChallengeModels.swift */,
 				B6E97D43360D98F5DA53C44E /* ChallengeScoring.swift */,
 			);
@@ -245,6 +260,14 @@
 			path = Pool;
 			sourceTree = "<group>";
 		};
+		955407868206F2DB2CD5A8B1 /* SignIn */ = {
+			isa = PBXGroup;
+			children = (
+				2022CD14EBBA00C68949D3E0 /* SignInGate.swift */,
+			);
+			path = SignIn;
+			sourceTree = "<group>";
+		};
 		97BE55159F7E6D234B33111C /* ShieldConfiguration */ = {
 			isa = PBXGroup;
 			children = (
@@ -278,11 +301,13 @@
 			isa = PBXGroup;
 			children = (
 				10568C2A5E46080F79E8C5CD /* AppAttestService.swift */,
+				EDDB334BED9B2BDDCD58B032 /* AuthService.swift */,
 				305E8FD27982CC2DF39C0D75 /* ChallengeAPIClient.swift */,
 				02A5AEB1AB068B7827D499A8 /* ChallengeCoordinator.swift */,
 				55C043D5D066D5A0E26477A5 /* DemoAppSelectionStore.swift */,
 				61367BED15863096CFB7E09B /* DemoPoolStore.swift */,
 				E120F17AE11FD7C1542C2974 /* HTTPChallengeAPIClient.swift */,
+				6BD2997103C4B230AF3ED2DE /* KeychainAuthTokenStore.swift */,
 				1ED4A21F1436E47AD95AD351 /* ScreenTimeAuthorizationService.swift */,
 				B39EBDF3FA120A0C6F861FD0 /* ScreenTimeSelectionStore.swift */,
 			);
@@ -297,6 +322,7 @@
 				AA0B0E40ACCFCDA240C28178 /* RootTabView.swift */,
 				8EA49F59078F92208F58C40A /* Pool */,
 				10ED0CC519BFDDB0A4F47F8C /* Profile */,
+				955407868206F2DB2CD5A8B1 /* SignIn */,
 				B29A4199846BC3CED955F883 /* Today */,
 			);
 			path = Features;
@@ -518,6 +544,8 @@
 				89E8F445B13843FDA869961D /* AppAttestService.swift in Sources */,
 				3084D3197F1A993F88DF3412 /* AppGroupStore.swift in Sources */,
 				F405BF9AAC0EB5D6A05AE3E6 /* AppSelectionView.swift in Sources */,
+				766F5023D642A0CC6A21CEAF /* AuthService.swift in Sources */,
+				4AD9DF77423C3E331F8CAFCC /* AuthSession.swift in Sources */,
 				FED12115D844765B78A52D11 /* ChallengeAPIClient.swift in Sources */,
 				236338468161B81B510D241F /* ChallengeCoordinator.swift in Sources */,
 				32AD77849A073D07FA7B8AE2 /* ChallengeModels.swift in Sources */,
@@ -528,6 +556,7 @@
 				CE8985F67A377598810204AD /* DemoPoolStore.swift in Sources */,
 				154B5A6DCBC323085F30E33F /* DeviceIdentityStore.swift in Sources */,
 				22A4EB7723CF04F02B7B34C4 /* HTTPChallengeAPIClient.swift in Sources */,
+				84458B93B1BA04D4CEB3ECA2 /* KeychainAuthTokenStore.swift in Sources */,
 				D8D624183CAB447BB77856F6 /* LocalChallengeEventStore.swift in Sources */,
 				B6C06CBF8EEABF7BAF323420 /* PoolFocusApp.swift in Sources */,
 				5E31E2EFCD97191CCDD9DC0E /* PoolFocusConstants.swift in Sources */,
@@ -538,6 +567,7 @@
 				971DF952033E0F86EF2D7897 /* ScreenTimeAuthorizationService.swift in Sources */,
 				1800BC3E6828BE9E0408C377 /* ScreenTimeSelectionStore.swift in Sources */,
 				8E23DCB4C36C547FAF8806B0 /* SharedComponents.swift in Sources */,
+				A351340737574FA2D7BDE9AC /* SignInGate.swift in Sources */,
 				2A0988B04A113B3FD16EB53A /* TodayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -548,6 +578,7 @@
 			files = (
 				708C919B9086FDC38CE36413 /* APIDTOs.swift in Sources */,
 				4D6A37705300F6A3D817FEA4 /* AppGroupStore.swift in Sources */,
+				E168A38ABE62293BF5030585 /* AuthSession.swift in Sources */,
 				666DA495210042EF2D162A51 /* ChallengeModels.swift in Sources */,
 				0AA3CFD746C69DF8B02DE921 /* ChallengeScoring.swift in Sources */,
 				EA8EB423025AAD2F29B207F9 /* DeviceIdentityStore.swift in Sources */,
@@ -567,6 +598,8 @@
 				2E1360B47CE4D4B2B844ED9B /* AppAttestService.swift in Sources */,
 				7BE5604D12B3FF679EB26559 /* AppGroupStore.swift in Sources */,
 				BF69B3C08F1852CF9BA7407E /* AppSelectionView.swift in Sources */,
+				8B4E7AEF452F1A52CD2E2958 /* AuthService.swift in Sources */,
+				AA9D8668F22FDD53FA98328E /* AuthSession.swift in Sources */,
 				B2BE684EB9B731F31742A29E /* ChallengeAPIClient.swift in Sources */,
 				0550FAADD6A0BC0AF3E46DC0 /* ChallengeCoordinator.swift in Sources */,
 				AEEA9608525EA3807A085C37 /* ChallengeModels.swift in Sources */,
@@ -577,6 +610,7 @@
 				7A9C997B9F0C9B4131382961 /* DemoPoolStore.swift in Sources */,
 				D14D87DCF613A53504B87691 /* DeviceIdentityStore.swift in Sources */,
 				4B0F4C801B6BBCB9494F6B45 /* HTTPChallengeAPIClient.swift in Sources */,
+				8632FF11FBA391A27B0A19EA /* KeychainAuthTokenStore.swift in Sources */,
 				C07077B0D67C1996753678A5 /* LocalChallengeEventStore.swift in Sources */,
 				DB177BEF4E7F2591BBD09CFF /* PoolFocusApp.swift in Sources */,
 				CFA820CB47D6DDDEE56BB5CC /* PoolFocusConstants.swift in Sources */,
@@ -587,6 +621,7 @@
 				EEFE7BA67D0F40FCA3110DA6 /* ScreenTimeAuthorizationService.swift in Sources */,
 				D4CEF168DACA87EA531F667A /* ScreenTimeSelectionStore.swift in Sources */,
 				D0EC3CACF5FFC17662449BDF /* SharedComponents.swift in Sources */,
+				7C426B978C4B4FEFBE6226DF /* SignInGate.swift in Sources */,
 				F0D31E7598D975A3C626912D /* TodayView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -597,6 +632,7 @@
 			files = (
 				6BC5972A8E0E3AAF62FB5BD2 /* APIDTOs.swift in Sources */,
 				126C65898C395FF747D537BE /* AppGroupStore.swift in Sources */,
+				822C1F646C5E364C613897F4 /* AuthSession.swift in Sources */,
 				6E8CA272AA63DEFADA342CA6 /* ChallengeModels.swift in Sources */,
 				71C516CFF70F97F0F39A3E0C /* ChallengeScoring.swift in Sources */,
 				43CFE4A4C22E32ACD8B5D4D0 /* DeviceIdentityStore.swift in Sources */,

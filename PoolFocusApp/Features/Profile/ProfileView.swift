@@ -4,12 +4,35 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject private var authorization: ScreenTimeAuthorizationService
     @EnvironmentObject private var coordinator: ChallengeCoordinator
+    @EnvironmentObject private var auth: AuthService
     @State private var isShowingPicker = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
+                    if let user = auth.currentUser {
+                        CardSection(title: "Account", systemImage: "person.crop.circle", tint: .indigo) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(user.displayName ?? user.email ?? "Apple ID")
+                                    .font(.headline)
+                                Text(user.userIdentifier)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                            Button(role: .destructive) {
+                                auth.signOut()
+                            } label: {
+                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .accessibilityIdentifier("signOutButton")
+                        }
+                    }
+
                     CardSection(title: "Access", systemImage: "shield", tint: .indigo) {
                         HStack {
                             Text("Screen Time")

@@ -4,6 +4,7 @@ import SwiftUI
 struct RootTabView: View {
     @StateObject private var authorization = ScreenTimeAuthorizationService()
     @StateObject private var coordinator = ChallengeCoordinator()
+    @StateObject private var auth = AuthService()
 
     var body: some View {
         TabView {
@@ -24,6 +25,7 @@ struct RootTabView: View {
         }
         .environmentObject(authorization)
         .environmentObject(coordinator)
+        .environmentObject(auth)
         .tint(.indigo)
         .dynamicTypeSize(.small ... .xxLarge)
         .task {

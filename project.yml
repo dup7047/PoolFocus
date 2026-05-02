@@ -26,6 +26,9 @@ targets:
           - UIInterfaceOrientationPortrait
     entitlements:
       path: Config/PoolFocusSimulator.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
     settings:
       base:
         PRODUCT_NAME: PoolFocusDemo
@@ -52,6 +55,8 @@ targets:
     entitlements:
       path: Config/PoolFocusApp.entitlements
       properties:
+        com.apple.developer.applesignin:
+          - Default
         com.apple.developer.family-controls: true
         com.apple.security.application-groups:
           - group.com.dantino.PoolFocus
