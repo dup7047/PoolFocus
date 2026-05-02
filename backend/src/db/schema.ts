@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 // Reusable timestamp helpers — UTC-stored, ISO-emitted by drizzle.
 const createdAt = () =>
@@ -102,6 +102,81 @@ export const poolInvites = pgTable("pool_invites", {
   }),
   createdAt: createdAt()
 });
+
+export const challengeDays = pgTable("challenge_days", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  poolId: uuid("pool_id")
+    .notNull()
+    .references(() => pools.id, { onDelete: "cascade" }),
+  challengeStartUtc: timestamp("challenge_start_utc", { withTimezone: true }).notNull(),
+  challengeEndUtc: timestamp("challenge_end_utc", { withTimezone: true }).notNull(),
+  status: text("status").notNull().default("scheduled"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt()
+});
+
+export const challengeEntries = pgTable(
+  "challenge_entries",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    challengeDayId: uuid("challenge_day_id")
+      .notNull()
+      .references(() => challengeDays.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    displayName: text("display_name").notNull(),
+    status: text("status").notNull().default("pending_config"),
+    selectionVersionHash: text("selection_version_hash"),
+    forfeitedAt: timestamp("forfeited_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    pointsAwarded: integer("points_awarded").notNull().default(0),
+    createdAt: createdAt(),
+    updatedAt: updatedAt()
+  },
+  (t) => [
+    uniqueIndex("challenge_entries_day_user_unique").on(t.challengeDayId, t.userId)
+  ]
+);
+
+export const screenTimeEvents = pgTable(
+  "screen_time_events",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => challengeEntries.id, { onDelete: "cascade" }),
+    deviceId: uuid("device_id")
+      .notNull()
+      .references(() => devices.id, { onDelete: "cascade" }),
+    clientEventId: text("client_event_id").notNull(),
+    type: text("type").notNull(),
+    selectionVersionHash: text("selection_version_hash"),
+    clientOccurredAt: timestamp("client_occurred_at", { withTimezone: true }).notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true })
+      .notNull()
+      .default(sql`now()`)
+  },
+  (t) => [
+    uniqueIndex("screen_time_events_entry_client_event_unique").on(
+      t.entryId,
+      t.clientEventId
+    )
+  ]
+);
+
+export type ChallengeDayRow = typeof challengeDays.$inferSelect;
+export type NewChallengeDay = typeof challengeDays.$inferInsert;
+export type ChallengeEntryRow = typeof challengeEntries.$inferSelect;
+export type NewChallengeEntry = typeof challengeEntries.$inferInsert;
+export type ScreenTimeEventRow = typeof screenTimeEvents.$inferSelect;
+export type NewScreenTimeEvent = typeof screenTimeEvents.$inferInsert;
 
 export type UserRow = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;

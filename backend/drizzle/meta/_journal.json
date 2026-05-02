@@ -22,6 +22,20 @@
       "when": 1777727528287,
       "tag": "0002_updated_at_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777758933426,
+      "tag": "0003_right_roughhouse",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777758941922,
+      "tag": "0004_bitter_stellaris",
+      "breakpoints": true
     }
   ]
 }
