@@ -3,6 +3,11 @@ import { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import { appAttestKeys } from "./db/schema.js";
+import {
+  AppAttestValidationError,
+  AppAttestValidator,
+  ValidationResult
+} from "./app-attest-validator.js";
 
 /**
  * In-process challenge store. Each challenge is a 32-byte random base64url
@@ -65,7 +70,8 @@ interface AttestBody {
 export function registerAppAttestRoutes(
   app: FastifyInstance,
   db: NodePgDatabase | undefined,
-  challenges: ChallengeStore
+  challenges: ChallengeStore,
+  validator?: AppAttestValidator
 ): void {
   app.get("/auth/attest/challenge", async (_req, reply) => {
     if (!db) {
@@ -101,29 +107,55 @@ export function registerAppAttestRoutes(
       return { error: "challenge invalid, already used, or expired" };
     }
 
+    // 6.1b: validate the attestation.
+    let validation: ValidationResult | undefined;
+    if (validator) {
+      try {
+        validation = validator.validate({
+          attestation: Buffer.from(attestation, "base64"),
+          keyId,
+          challenge
+        });
+      } catch (err) {
+        if (err instanceof AppAttestValidationError) {
+          req.log.warn({ stage: err.stage, msg: err.message }, "app-attest validation failed");
+          reply.code(401);
+          return { error: `attestation validation failed: ${err.stage}` };
+        }
+        throw err;
+      }
+    }
+
     // Idempotent insert: same keyId from a re-attestation is a no-op.
-    // (The keyId is per-app-installation; re-registering is fine.)
     const existing = await db
       .select({ id: appAttestKeys.id })
       .from(appAttestKeys)
       .where(eq(appAttestKeys.keyId, keyId))
       .limit(1);
 
+    const validatedFields = validation
+      ? {
+          publicKey: validation.publicKey,
+          environment: validation.environment,
+          validatedAt: new Date(),
+          assertionCounter: 0
+        }
+      : {};
+
     if (existing[0]) {
-      // Update the attestation/challenge so 6.1b validation has the freshest payload.
       await db
         .update(appAttestKeys)
-        .set({ attestation, challenge })
+        .set({ attestation, challenge, ...validatedFields })
         .where(eq(appAttestKeys.keyId, keyId));
       reply.code(200);
-      return { id: existing[0].id, status: "updated" };
+      return { id: existing[0].id, status: "updated", validated: !!validation };
     }
 
     const [row] = await db
       .insert(appAttestKeys)
-      .values({ keyId, attestation, challenge })
+      .values({ keyId, attestation, challenge, ...validatedFields })
       .returning({ id: appAttestKeys.id });
     reply.code(201);
-    return { id: row.id, status: "created" };
+    return { id: row.id, status: "created", validated: !!validation };
   });
 }

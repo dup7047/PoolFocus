@@ -2,12 +2,22 @@ import CryptoKit
 import DeviceCheck
 import Foundation
 
+struct AppAttestAssertion: Sendable {
+    let keyId: String
+    let data: Data
+}
+
 protocol AppAttesting: Sendable {
     /// Generate a key + attestation if we don't have one yet, then POST it to
     /// the backend. Idempotent and safe to call on every launch.
     func bootstrap() async
-    /// Returns nil until 6.2 wires real assertions. Kept for compatibility
-    /// with `ChallengeCoordinator` which already calls it on every event.
+    /// Sign a request payload (the exact bytes we'll send as the HTTP body)
+    /// with the App Attest private key. Returns nil if the device doesn't
+    /// support App Attest, or if no key has been registered yet — callers
+    /// must decide whether to fail closed (production) or open (dev/demo).
+    func generateAssertion(for payload: Data) async throws -> AppAttestAssertion?
+    /// Legacy shim used by older event-submission code paths.
+    /// Returns just the assertion bytes (no keyId binding).
     func assertion(for payload: Data) async throws -> Data?
 }
 
@@ -82,9 +92,22 @@ final class AppAttestService: AppAttesting, @unchecked Sendable {
         }
     }
 
+    func generateAssertion(for payload: Data) async throws -> AppAttestAssertion? {
+        guard attest.isSupported else { return nil }
+        guard let keyId = try keyStore.load() else { return nil }
+        let clientDataHash = Data(SHA256.hash(data: payload))
+        let assertion: Data = try await withCheckedThrowingContinuation { cont in
+            attest.generateAssertion(keyId, clientDataHash: clientDataHash) { data, error in
+                if let error = error { cont.resume(throwing: error); return }
+                guard let data else { cont.resume(throwing: AppAttestError.missingAttestation); return }
+                cont.resume(returning: data)
+            }
+        }
+        return AppAttestAssertion(keyId: keyId, data: assertion)
+    }
+
     func assertion(for payload: Data) async throws -> Data? {
-        // Real assertions land in 6.2.
-        return nil
+        try await generateAssertion(for: payload)?.data
     }
 
     // MARK: - DeviceCheck wrappers

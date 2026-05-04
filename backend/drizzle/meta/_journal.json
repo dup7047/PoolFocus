@@ -43,6 +43,13 @@
       "when": 1777923865921,
       "tag": "0005_needy_killraven",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777924578177,
+      "tag": "0006_sudden_slapstick",
+      "breakpoints": true
     }
   ]
 }

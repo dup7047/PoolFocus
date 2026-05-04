@@ -186,7 +186,15 @@ export const appAttestKeys = pgTable("app_attest_keys", {
     .notNull()
     .default(sql`now()`),
   validatedAt: timestamp("validated_at", { withTimezone: true }),
-  publicKey: text("public_key")
+  // Public key (DER-encoded SPKI, base64) extracted from the credential
+  // certificate during 6.1b validation. Used for verifying assertions in 6.2.
+  publicKey: text("public_key"),
+  // App Attest environment from the attestation (`appattest` for production,
+  // `appattestdevelop` for development builds).
+  environment: text("environment"),
+  // Last assertion counter we accepted. Strictly monotonic; an incoming
+  // assertion with counter <= this value is rejected as a replay.
+  assertionCounter: integer("assertion_counter").notNull().default(0)
 });
 
 export type AppAttestKeyRow = typeof appAttestKeys.$inferSelect;

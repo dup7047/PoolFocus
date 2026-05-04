@@ -307,9 +307,12 @@ final class ChallengeCoordinator: ObservableObject {
         var syncedIDs = Set<UUID>()
         for event in events {
             do {
-                let payload = try JSONEncoder.poolFocus.encode(event)
-                let assertion = try await appAttest.assertion(for: payload)
-                try await apiClient.submitEvent(ChallengeEventRequest(event: event, appAttestAssertion: assertion))
+                // The API client now signs the canonical body bytes itself
+                // and attaches them as headers; we just pass the attest impl.
+                try await apiClient.submitEvent(
+                    ChallengeEventRequest(event: event, appAttestAssertion: nil),
+                    attest: appAttest
+                )
                 syncedIDs.insert(event.id)
             } catch {
                 latestMessage = "Event sync paused: \(error.localizedDescription)"

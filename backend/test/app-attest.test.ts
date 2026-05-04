@@ -108,6 +108,71 @@ try {
   });
   assert.equal(huge.statusCode, 413, "oversized keyId rejected");
 
+  // ===== With validator wired (proves /auth/attest enforces validation) =====
+  // Build a real synthetic attestation using the same machinery as the
+  // validator unit test, then POST it through the HTTP endpoint and verify
+  // the row gets validated_at + public_key set.
+  const { default: makeValidatorFixture } = await import("./_attest-fixture-helper.js");
+  const validated = await makeValidatorFixture();
+
+  const validatorApp = Fastify({ logger: false });
+  const challenges2 = new ChallengeStore();
+  const { AppAttestValidator } = await import("../src/app-attest-validator.js");
+  registerAppAttestRoutes(
+    validatorApp,
+    db,
+    challenges2,
+    new AppAttestValidator({
+      appId: validated.appId,
+      trustedRootsPEM: [validated.rootPem]
+    })
+  );
+  await validatorApp.ready();
+
+  const ch = (await validatorApp.inject({ method: "GET", url: "/auth/attest/challenge" })).json() as { challenge: string };
+  // Re-build attestation with the server-issued challenge bound into it.
+  const real = await validated.buildWithChallenge(ch.challenge);
+  const post = await validatorApp.inject({
+    method: "POST",
+    url: "/auth/attest",
+    payload: {
+      keyId: real.keyId.toString("base64"),
+      attestation: real.attestation.toString("base64"),
+      challenge: ch.challenge
+    }
+  });
+  testKeyIds.push(real.keyId.toString("base64"));
+  assert.equal(post.statusCode, 201, `POST attest with real validation: ${post.body}`);
+  const postBody = post.json() as { validated: boolean };
+  assert.equal(postBody.validated, true, "endpoint reports validated:true");
+
+  const dbRowReal = await db
+    .select()
+    .from(appAttestKeys)
+    .where(eq(appAttestKeys.keyId, real.keyId.toString("base64")))
+    .limit(1);
+  assert.ok(dbRowReal[0].publicKey && dbRowReal[0].publicKey.length > 0, "publicKey persisted");
+  assert.equal(dbRowReal[0].environment, "production");
+  assert.notEqual(dbRowReal[0].validatedAt, null);
+
+  // Tampered attestation → 401
+  const ch2 = (await validatorApp.inject({ method: "GET", url: "/auth/attest/challenge" })).json() as { challenge: string };
+  const real2 = await validated.buildWithChallenge(ch2.challenge);
+  const tamperedAttestation = Buffer.from(real2.attestation);
+  tamperedAttestation[10] ^= 0xff;
+  const bad = await validatorApp.inject({
+    method: "POST",
+    url: "/auth/attest",
+    payload: {
+      keyId: real2.keyId.toString("base64"),
+      attestation: tamperedAttestation.toString("base64"),
+      challenge: ch2.challenge
+    }
+  });
+  assert.equal(bad.statusCode, 401, `tampered attestation should be rejected: ${bad.body}`);
+
+  await validatorApp.close();
+
   console.log("App Attest tests passed");
 } finally {
   // Cleanup any test rows we inserted, then close.

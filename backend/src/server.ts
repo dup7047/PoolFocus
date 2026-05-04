@@ -6,6 +6,13 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { ChallengeStore, registerAppAttestRoutes } from "./app-attest.js";
 import {
+  AppAttestAssertionError,
+  clientDataHashOf,
+  validateAssertion
+} from "./app-attest-assertion.js";
+import { AppAttestValidator } from "./app-attest-validator.js";
+import {
+  appAttestKeys as appAttestKeysTable,
   challengeDays as challengeDaysTable,
   devices as devicesTable,
   pools as poolsTable,
@@ -15,6 +22,7 @@ import { ChallengeEventRequest, ChallengeReadinessRequest } from "./models.js";
 import { PgRepository } from "./pg-repository.js";
 import { InMemoryRepository, Repository } from "./repository.js";
 import { awardPoints, finalizeEntries, leaderboard } from "./scoring.js";
+import { createHash } from "node:crypto";
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -55,7 +63,37 @@ app.get("/health", async () => ({
 }));
 
 const challengeStore = new ChallengeStore();
-registerAppAttestRoutes(app, db, challengeStore);
+
+// 6.1b/6.2 wiring: build a validator iff APP_ATTEST_APP_ID is configured.
+// In dev/test you can leave it unset and the /auth/attest endpoint will
+// persist attestations without validating (matches 6.1a behavior).
+const appAttestAppId = process.env.APP_ATTEST_APP_ID;
+const appAttestRequired = process.env.APP_ATTEST_REQUIRED === "true";
+const appAttestValidator = appAttestAppId
+  ? new AppAttestValidator({
+      appId: appAttestAppId,
+      allowDevelopment: process.env.APP_ATTEST_ALLOW_DEV === "true"
+    })
+  : undefined;
+const expectedRpIdHash = appAttestAppId
+  ? createHash("sha256").update(Buffer.from(appAttestAppId, "utf8")).digest()
+  : undefined;
+
+registerAppAttestRoutes(app, db, challengeStore, appAttestValidator);
+
+// Capture raw body so /challenge/events can compute clientDataHash for assertion verification.
+app.addContentTypeParser(
+  "application/json",
+  { parseAs: "buffer" },
+  (req, body, done) => {
+    (req as { rawBody?: Buffer }).rawBody = body as Buffer;
+    try {
+      done(null, body.length === 0 ? {} : JSON.parse((body as Buffer).toString("utf8")));
+    } catch (err) {
+      done(err as Error, undefined);
+    }
+  }
+);
 
 // Dev convenience: ensures today's challenge_day exists for the seeded pool and
 // returns the IDs needed to round-trip through readiness/leaderboard.
@@ -132,9 +170,62 @@ app.post<{ Body: ChallengeReadinessRequest & { userID?: string; displayName?: st
   }
 );
 
-app.post<{ Body: ChallengeEventRequest }>(
+app.post<{
+  Body: ChallengeEventRequest;
+  Headers: { "x-appattest-keyid"?: string; "x-appattest-assertion"?: string };
+}>(
   "/challenge/events",
   async (request, reply) => {
+    const keyId = request.headers["x-appattest-keyid"];
+    const assertionB64 = request.headers["x-appattest-assertion"];
+
+    if (appAttestRequired && (!keyId || !assertionB64)) {
+      reply.code(401);
+      return { error: "App Attest assertion required" };
+    }
+
+    if (keyId && assertionB64) {
+      if (!db || !expectedRpIdHash) {
+        reply.code(503);
+        return { error: "App Attest enforcement requires DATABASE_URL + APP_ATTEST_APP_ID" };
+      }
+      const rows = await db
+        .select()
+        .from(appAttestKeysTable)
+        .where(eq(appAttestKeysTable.keyId, keyId))
+        .limit(1);
+      const row = rows[0];
+      if (!row || !row.publicKey) {
+        reply.code(401);
+        return { error: "unknown or unvalidated keyId" };
+      }
+      const rawBody = (request as { rawBody?: Buffer }).rawBody;
+      if (!rawBody) {
+        reply.code(400);
+        return { error: "rawBody not captured (server misconfigured)" };
+      }
+      try {
+        const result = validateAssertion({
+          assertion: Buffer.from(assertionB64, "base64"),
+          publicKeyDerBase64: row.publicKey,
+          clientDataHash: clientDataHashOf(rawBody),
+          expectedRpIdHash,
+          lastCounter: row.assertionCounter
+        });
+        await db
+          .update(appAttestKeysTable)
+          .set({ assertionCounter: result.newCounter })
+          .where(eq(appAttestKeysTable.keyId, keyId));
+      } catch (err) {
+        if (err instanceof AppAttestAssertionError) {
+          request.log.warn({ stage: err.stage, msg: err.message }, "assertion failed");
+          reply.code(401);
+          return { error: `assertion failed: ${err.stage}` };
+        }
+        throw err;
+      }
+    }
+
     const event = await repository.appendEvent(request.body.event);
     reply.code(202);
     return { event };
