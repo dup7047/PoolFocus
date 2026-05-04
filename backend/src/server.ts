@@ -1,4 +1,9 @@
 import "dotenv/config";
+import { webcrypto } from "node:crypto";
+// jose (used by /auth/apple) needs globalThis.crypto; Node <19 doesn't expose it.
+if (!(globalThis as { crypto?: unknown }).crypto) {
+  (globalThis as { crypto?: unknown }).crypto = webcrypto;
+}
 import { eq } from "drizzle-orm";
 import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
 import Fastify from "fastify";
@@ -11,6 +16,8 @@ import {
   validateAssertion
 } from "./app-attest-assertion.js";
 import { AppAttestValidator } from "./app-attest-validator.js";
+import { AppleTokenVerifier, registerAppleAuthRoutes } from "./auth-apple.js";
+import { BackendJWT } from "./auth-jwt.js";
 import {
   appAttestKeys as appAttestKeysTable,
   challengeDays as challengeDaysTable,
@@ -80,6 +87,15 @@ const expectedRpIdHash = appAttestAppId
   : undefined;
 
 registerAppAttestRoutes(app, db, challengeStore, appAttestValidator);
+
+// 2.2 wiring: Apple Sign-In + backend JWT issuance.
+const appleAudience = process.env.APPLE_AUDIENCE; // "com.dantino.PoolFocus" or Service ID
+const jwtSecret = process.env.JWT_SECRET;
+if (db && appleAudience && jwtSecret) {
+  const verifier = new AppleTokenVerifier({ audience: appleAudience });
+  const jwt = new BackendJWT({ secret: jwtSecret });
+  registerAppleAuthRoutes(app, db, verifier, jwt);
+}
 
 // Capture raw body so /challenge/events can compute clientDataHash for assertion verification.
 app.addContentTypeParser(
