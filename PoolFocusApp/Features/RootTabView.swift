@@ -5,6 +5,7 @@ struct RootTabView: View {
     @StateObject private var authorization = ScreenTimeAuthorizationService()
     @StateObject private var coordinator = ChallengeCoordinator()
     @StateObject private var auth = AuthService()
+    @StateObject private var migration = DemoMigrationCoordinator()
     private let appAttest: AppAttesting = AppAttestService()
 
     var body: some View {
@@ -27,6 +28,7 @@ struct RootTabView: View {
         .environmentObject(authorization)
         .environmentObject(coordinator)
         .environmentObject(auth)
+        .environmentObject(migration)
         .tint(.indigo)
         .dynamicTypeSize(.small ... .xxLarge)
         .task {

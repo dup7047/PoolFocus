@@ -5,6 +5,7 @@ struct TodayView: View {
     @EnvironmentObject private var authorization: ScreenTimeAuthorizationService
     @EnvironmentObject private var coordinator: ChallengeCoordinator
     @EnvironmentObject private var auth: AuthService
+    @EnvironmentObject private var migration: DemoMigrationCoordinator
     @State private var isShowingPoolSetup = false
     @State private var isShowingAppPicker = false
 
@@ -70,7 +71,17 @@ struct TodayView: View {
                     AppSelectionView()
                 }
             }
+            .sheet(isPresented: $migration.isPromptVisible, onDismiss: coordinator.refreshLocalState) {
+                MigrationPromptSheet()
+            }
+            .onAppear { evaluateMigration() }
+            .onChange(of: auth.hasUsableSession) { _ in evaluateMigration() }
         }
+    }
+
+    private func evaluateMigration() {
+        guard auth.hasUsableSession else { return }
+        migration.evaluateAfterSignIn()
     }
 
     private var stage: TodayStage {

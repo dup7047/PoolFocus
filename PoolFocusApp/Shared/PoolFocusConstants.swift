@@ -15,6 +15,8 @@ enum PoolFocusConstants {
     static let demoPoolKey = "demoPool"
     static let demoStreakKey = "demoStreak"
     static let demoLastResultsKey = "demoLastResults"
+    static let demoMigrationCompletedKey = "demoMigrationCompleted"
+    static let demoMigrationChoiceKey = "demoMigrationChoice"
 
     static let dailyActivityName = "daily-focus-challenge"
     static let appUsageEventName = "selected-app-usage"

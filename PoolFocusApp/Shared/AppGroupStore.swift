@@ -20,6 +20,7 @@ struct AppGroupStore {
 
     func set(_ data: Data?, forKey key: String) {
         defaults.set(data, forKey: key)
+        defaults.synchronize()
     }
 
     func string(forKey key: String) -> String? {
@@ -28,6 +29,7 @@ struct AppGroupStore {
 
     func set(_ value: String?, forKey key: String) {
         defaults.set(value, forKey: key)
+        defaults.synchronize()
     }
 
     func date(forKey key: String) -> Date? {
@@ -36,6 +38,7 @@ struct AppGroupStore {
 
     func set(_ value: Date?, forKey key: String) {
         defaults.set(value, forKey: key)
+        defaults.synchronize()
     }
 
     func integer(forKey key: String) -> Int {
@@ -44,6 +47,7 @@ struct AppGroupStore {
 
     func set(_ value: Int, forKey key: String) {
         defaults.set(value, forKey: key)
+        defaults.synchronize()
     }
 
     func codable<T: Codable>(_ type: T.Type, forKey key: String) -> T? {
