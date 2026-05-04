@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "tsc -p tsconfig.json && node dist/test/scoring.test.js && node dist/test/pg-repository.test.js",
+    "test": "tsc -p tsconfig.json && node dist/test/scoring.test.js && node dist/test/pg-repository.test.js && node dist/test/app-attest.test.js",
     "dev": "tsc -p tsconfig.json && node dist/src/server.js",
     "migrate": "tsc -p tsconfig.json && node dist/src/db/migrate.js",
     "seed": "tsc -p tsconfig.json && node dist/src/db/seed.js",

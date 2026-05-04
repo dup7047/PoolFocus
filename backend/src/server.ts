@@ -4,6 +4,7 @@ import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
 import Fastify from "fastify";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
+import { ChallengeStore, registerAppAttestRoutes } from "./app-attest.js";
 import {
   challengeDays as challengeDaysTable,
   devices as devicesTable,
@@ -52,6 +53,9 @@ app.get("/health", async () => ({
   mode: "non-cash-mvp",
   storage: db ? "postgres" : "memory"
 }));
+
+const challengeStore = new ChallengeStore();
+registerAppAttestRoutes(app, db, challengeStore);
 
 // Dev convenience: ensures today's challenge_day exists for the seeded pool and
 // returns the IDs needed to round-trip through readiness/leaderboard.

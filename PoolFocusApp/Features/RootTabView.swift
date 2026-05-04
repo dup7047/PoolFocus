@@ -5,6 +5,7 @@ struct RootTabView: View {
     @StateObject private var authorization = ScreenTimeAuthorizationService()
     @StateObject private var coordinator = ChallengeCoordinator()
     @StateObject private var auth = AuthService()
+    private let appAttest: AppAttesting = AppAttestService()
 
     var body: some View {
         TabView {
@@ -31,6 +32,7 @@ struct RootTabView: View {
         .task {
             authorization.refresh()
             coordinator.refreshLocalState()
+            await appAttest.bootstrap()
             await coordinator.syncPendingEvents()
         }
     }

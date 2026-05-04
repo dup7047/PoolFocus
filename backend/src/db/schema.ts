@@ -171,6 +171,27 @@ export const screenTimeEvents = pgTable(
   ]
 );
 
+// App Attest: Apple-issued public-key attestation that a key was generated on
+// genuine Apple hardware running our app. Persisted pre-auth (we don't have a
+// user yet at first launch). Validation of the CBOR attestation + X.509 chain
+// happens in chunk 6.1b; until then `validatedAt` and `publicKey` stay null.
+export const appAttestKeys = pgTable("app_attest_keys", {
+  id: uuid("id")
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  keyId: text("key_id").notNull().unique(),
+  attestation: text("attestation").notNull(),
+  challenge: text("challenge").notNull(),
+  receivedAt: timestamp("received_at", { withTimezone: true })
+    .notNull()
+    .default(sql`now()`),
+  validatedAt: timestamp("validated_at", { withTimezone: true }),
+  publicKey: text("public_key")
+});
+
+export type AppAttestKeyRow = typeof appAttestKeys.$inferSelect;
+export type NewAppAttestKey = typeof appAttestKeys.$inferInsert;
+
 export type ChallengeDayRow = typeof challengeDays.$inferSelect;
 export type NewChallengeDay = typeof challengeDays.$inferInsert;
 export type ChallengeEntryRow = typeof challengeEntries.$inferSelect;
