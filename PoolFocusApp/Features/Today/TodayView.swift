@@ -74,7 +74,7 @@ struct TodayView: View {
     }
 
     private var stage: TodayStage {
-        if auth.currentUser == nil {
+        if !auth.hasUsableSession {
             return .signIn
         }
         if coordinator.pool == nil {

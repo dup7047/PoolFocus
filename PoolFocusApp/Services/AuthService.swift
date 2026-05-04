@@ -52,6 +52,18 @@ final class AuthService: ObservableObject {
         if args.contains("-poolfocus-sign-in-demo") {
             self.signInDemo()
         }
+        // Test hook: simulate a 401 (Apple identity preserved, JWT cleared)
+        // so we can verify the gate flips back to SignInGate on token expiry.
+        if args.contains("-poolfocus-expire-backend-token") {
+            self.handleUnauthorized()
+        }
+    }
+
+    /// True when we have a Sign-in identity AND a usable backend JWT.
+    /// Drives the SignInGate: once the backend rejects our JWT, this flips
+    /// to false and the gate re-appears.
+    var hasUsableSession: Bool {
+        currentUser?.hasFreshBackendToken == true
     }
 
     /// Exposed for the API client: the backend JWT to attach as Bearer.
@@ -120,11 +132,16 @@ final class AuthService: ObservableObject {
     }
 
     func signInDemo() {
+        // Synthetic backend token so the gate logic ("hasFreshBackendToken")
+        // is the same in demo and real builds — no per-mode branching in views.
         let session = AuthSession(
             userIdentifier: "demo.local.001",
             identityToken: Data("demo.identity.token".utf8),
             email: "demo@local.test",
-            displayName: "Demo User"
+            displayName: "Demo User",
+            backendToken: "demo.backend.token",
+            backendTokenExpiresAt: Date(timeIntervalSinceNow: 30 * 24 * 60 * 60),
+            backendUserId: "demo.user"
         )
         persist(session)
     }
