@@ -89,12 +89,13 @@ const expectedRpIdHash = appAttestAppId
 registerAppAttestRoutes(app, db, challengeStore, appAttestValidator);
 
 // 2.2 wiring: Apple Sign-In + backend JWT issuance.
-const appleAudience = process.env.APPLE_AUDIENCE; // "com.dantino.PoolFocus" or Service ID
+const appleAudience = process.env.APPLE_AUDIENCE;
 const jwtSecret = process.env.JWT_SECRET;
-if (db && appleAudience && jwtSecret) {
+const backendJwt = jwtSecret ? new BackendJWT({ secret: jwtSecret }) : undefined;
+const requireAuth = backendJwt?.preHandler();
+if (db && appleAudience && backendJwt) {
   const verifier = new AppleTokenVerifier({ audience: appleAudience });
-  const jwt = new BackendJWT({ secret: jwtSecret });
-  registerAppleAuthRoutes(app, db, verifier, jwt);
+  registerAppleAuthRoutes(app, db, verifier, backendJwt);
 }
 
 // Capture raw body so /challenge/events can compute clientDataHash for assertion verification.
@@ -163,6 +164,7 @@ app.post("/dev/bootstrap", async (_request, reply) => {
 
 app.post<{ Body: ChallengeReadinessRequest & { userID?: string; displayName?: string } }>(
   "/challenge/readiness",
+  { preHandler: requireAuth ? [requireAuth] : [] },
   async (request, reply) => {
     const body = request.body;
     const userID = body.userID;
@@ -191,6 +193,7 @@ app.post<{
   Headers: { "x-appattest-keyid"?: string; "x-appattest-assertion"?: string };
 }>(
   "/challenge/events",
+  { preHandler: requireAuth ? [requireAuth] : [] },
   async (request, reply) => {
     const keyId = request.headers["x-appattest-keyid"];
     const assertionB64 = request.headers["x-appattest-assertion"];
@@ -250,6 +253,7 @@ app.post<{
 
 app.get<{ Params: { challengeDayID: string } }>(
   "/challenge/leaderboard/:challengeDayID",
+  { preHandler: requireAuth ? [requireAuth] : [] },
   async (request, reply) => {
     const { challengeDayID } = request.params;
     const challengeDay = await repository.getChallengeDay(challengeDayID);

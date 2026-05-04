@@ -12,19 +12,47 @@ public struct AuthSession: Codable, Equatable, Sendable {
     public var email: String?
     public var displayName: String?
     public let signedInAt: Date
+    /// Backend-issued JWT (HS256, 30-day TTL) returned by `/auth/apple`.
+    /// Optional so older sessions stored before chunk 2.3 still decode.
+    public var backendToken: String?
+    public var backendTokenExpiresAt: Date?
+    /// User UUID assigned by the backend on first sign-in.
+    public var backendUserId: String?
 
     public init(
         userIdentifier: String,
         identityToken: Data,
         email: String? = nil,
         displayName: String? = nil,
-        signedInAt: Date = Date()
+        signedInAt: Date = Date(),
+        backendToken: String? = nil,
+        backendTokenExpiresAt: Date? = nil,
+        backendUserId: String? = nil
     ) {
         self.userIdentifier = userIdentifier
         self.identityToken = identityToken
         self.email = email
         self.displayName = displayName
         self.signedInAt = signedInAt
+        self.backendToken = backendToken
+        self.backendTokenExpiresAt = backendTokenExpiresAt
+        self.backendUserId = backendUserId
+    }
+
+    /// True when we have a backend JWT that is not yet expired.
+    public var hasFreshBackendToken: Bool {
+        guard let backendToken, !backendToken.isEmpty,
+              let expiry = backendTokenExpiresAt else { return false }
+        return expiry > Date()
+    }
+
+    /// Returns a copy of this session with the backend token field cleared.
+    /// Used after a 401 to bounce back through Sign in with Apple.
+    public func clearingBackendToken() -> AuthSession {
+        var copy = self
+        copy.backendToken = nil
+        copy.backendTokenExpiresAt = nil
+        return copy
     }
 }
 

@@ -3,6 +3,11 @@ import Foundation
 struct HTTPChallengeAPIClient: ChallengeAPIClient, Sendable {
     var baseURL: URL
     var session: URLSession = .shared
+    /// Returns the current backend JWT, or nil if signed out / token expired.
+    var tokenProvider: @Sendable () async -> String? = { nil }
+    /// Called when any authenticated request returns 401, so the AuthService
+    /// can clear the stored token and bounce the user to Sign in with Apple.
+    var onUnauthorized: @Sendable () async -> Void = { }
 
     func submitReadiness(_ request: ChallengeReadinessRequest) async throws {
         let _: EmptyResponse = try await send(
@@ -13,7 +18,6 @@ struct HTTPChallengeAPIClient: ChallengeAPIClient, Sendable {
     }
 
     func submitEvent(_ request: ChallengeEventRequest, attest: AppAttesting?) async throws {
-        // Encode the body once so the client and server hash identical bytes.
         let bodyData = try JSONEncoder.poolFocus.encode(request)
         var headers: [String: String] = [:]
         if let attest, let signed = try await attest.generateAssertion(for: bodyData) {
@@ -64,9 +68,22 @@ struct HTTPChallengeAPIClient: ChallengeAPIClient, Sendable {
         }
         for (k, v) in extraHeaders { urlRequest.setValue(v, forHTTPHeaderField: k) }
 
+        // Attach the backend JWT if we have one. The server enforces presence
+        // for every protected route; missing token → 401 → onUnauthorized.
+        if let token = await tokenProvider(), !token.isEmpty {
+            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
         let (data, response) = try await session.data(for: urlRequest)
-        guard let httpResponse = response as? HTTPURLResponse,
-              200..<300 ~= httpResponse.statusCode else {
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw URLError(.badServerResponse)
+        }
+
+        if httpResponse.statusCode == 401 {
+            await onUnauthorized()
+            throw URLError(.userAuthenticationRequired)
+        }
+        guard 200..<300 ~= httpResponse.statusCode else {
             throw URLError(.badServerResponse)
         }
         if data.isEmpty {

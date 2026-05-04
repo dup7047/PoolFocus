@@ -1,4 +1,5 @@
 import { jwtVerify, SignJWT } from "jose";
+import type { FastifyReply, FastifyRequest } from "fastify";
 
 /**
  * Backend session JWT (HS256, 30-day expiry). Subject is the user.id (UUID).
@@ -44,5 +45,28 @@ export class BackendJWT {
     const { payload } = await jwtVerify(token, this.secret, { issuer: ISSUER });
     if (!payload.sub) throw new Error("missing sub");
     return payload as unknown as BackendJWTPayload;
+  }
+
+  /**
+   * Fastify pre-handler that requires a valid Bearer token. On success,
+   * attaches `request.userId` (the JWT subject). On failure, replies 401.
+   */
+  preHandler() {
+    return async (request: FastifyRequest, reply: FastifyReply) => {
+      const header = request.headers.authorization;
+      if (!header || !header.startsWith("Bearer ")) {
+        reply.code(401);
+        return reply.send({ error: "missing Bearer token" });
+      }
+      const token = header.slice(7).trim();
+      try {
+        const payload = await this.verify(token);
+        (request as FastifyRequest & { userId?: string }).userId = payload.sub;
+      } catch (err) {
+        request.log.warn({ msg: (err as Error).message }, "JWT verification failed");
+        reply.code(401);
+        return reply.send({ error: "invalid or expired token" });
+      }
+    };
   }
 }

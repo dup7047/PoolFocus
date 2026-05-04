@@ -66,4 +66,61 @@ struct AuthTokenStoreTests {
         let store = InMemoryAuthTokenStore(initial: seed)
         #expect(try store.load() == seed)
     }
+
+    @Test("hasFreshBackendToken: false when missing or expired")
+    func freshBackendTokenStates() {
+        let none = AuthSession(userIdentifier: "u", identityToken: Data())
+        #expect(none.hasFreshBackendToken == false)
+        let expired = AuthSession(
+            userIdentifier: "u",
+            identityToken: Data(),
+            backendToken: "tok",
+            backendTokenExpiresAt: Date(timeIntervalSinceNow: -60)
+        )
+        #expect(expired.hasFreshBackendToken == false)
+        let fresh = AuthSession(
+            userIdentifier: "u",
+            identityToken: Data(),
+            backendToken: "tok",
+            backendTokenExpiresAt: Date(timeIntervalSinceNow: 60)
+        )
+        #expect(fresh.hasFreshBackendToken == true)
+    }
+
+    @Test("clearingBackendToken removes JWT but preserves Apple identity")
+    func clearingBackendToken() {
+        let s = AuthSession(
+            userIdentifier: "u-1",
+            identityToken: Data("id".utf8),
+            email: "x@y.z",
+            displayName: "Name",
+            backendToken: "jwt-here",
+            backendTokenExpiresAt: Date(timeIntervalSinceNow: 3600),
+            backendUserId: "uuid-1"
+        )
+        let cleared = s.clearingBackendToken()
+        #expect(cleared.userIdentifier == s.userIdentifier)
+        #expect(cleared.identityToken == s.identityToken)
+        #expect(cleared.email == s.email)
+        #expect(cleared.displayName == s.displayName)
+        #expect(cleared.backendUserId == s.backendUserId)
+        #expect(cleared.backendToken == nil)
+        #expect(cleared.backendTokenExpiresAt == nil)
+        #expect(cleared.hasFreshBackendToken == false)
+    }
+
+    @Test("Backward-compat: AuthSession encoded without backendToken still decodes")
+    func legacyDecode() throws {
+        // Simulate a session persisted before the backendToken field existed.
+        let legacy: [String: Any] = [
+            "userIdentifier": "u-old",
+            "identityToken": Data("id".utf8).base64EncodedString(),
+            "signedInAt": 0
+        ]
+        let json = try JSONSerialization.data(withJSONObject: legacy)
+        let decoded = try JSONDecoder().decode(AuthSession.self, from: json)
+        #expect(decoded.userIdentifier == "u-old")
+        #expect(decoded.backendToken == nil)
+        #expect(decoded.hasFreshBackendToken == false)
+    }
 }
